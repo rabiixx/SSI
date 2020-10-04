@@ -49,17 +49,13 @@ if [ "$#" -eq 4 ]; then
 
 		numPass=$(wc -l $4 | awk '{print $1}')
 
-
-		echo -n "[##################################################]"
-
 		echo "Num pass: $numPass"
-		echo "Encoded message: $2"
+		echo "[+] Encoded message: $2"
 		echo "[+] Number of Cyphers: $(wc -l $3)"
 		echo "[+] Number of passwords: $(wc -l $4)"
 
 		while IFS= read -r cypher
 		do
-			echo "$cypher"
 			i=1
 			while IFS= read -r password
 			do
@@ -67,22 +63,28 @@ if [ "$#" -eq 4 ]; then
 				progression=$(($i*50))
 				progression=$((progression/numPass))
 				((progression++))
-				echo $progression
+				numTabs=$((49-progression))
+				#((numTabs--))
+				pb=$(printf '%*s' "$progression" | tr ' ' "#")
+				tabs=$(printf '%*s' "$numTabs")
+                                echo -ne "$cypher => [$pb$tabs]($i/$numPass)\r"
+				str=$(echo "$2" | openssl enc -base64 -d | openssl enc $cypher -d -pass pass:$password 2>/dev/null| tr -d '\0')
+
+
 				((i++))
-
-				s=$(printf "%0.s#" $(seq 1 $progression))
-				echo -ne "\r$s\r"
-				
-				str=$(echo "$2" | openssl enc -base64 -d | openssl enc $cypher -d -pass pass:$password 2>/dev/null| tr -d '\0')	
-
 				case "$str" in *"flag"*)
-					echo "***FLAG encontrada***"
+					printf "\n\n\t\t\t*** FLAG encontrada ***\n"
 					echo "[+] Algoritmo de Cifrado: $cypher"
 					echo "[+] Contraseña: $password"
 					echo $str > flag.txt
 					exit
 					;;
 				esac
+
+				if [ $i -eq $numPass ]; then
+					printf "\n"
+				fi
+
 			done < $4
 		done < $3
 	else
